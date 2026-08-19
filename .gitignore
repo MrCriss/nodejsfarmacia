@@ -1,0 +1,73 @@
+# ============================================
+# Node y npm
+# ============================================
+node_modules
+package-lock.json
+yarn.lock
+
+# ============================================
+# Build outputs
+# ============================================
+dist
+dist-ssr
+*.tsbuildinfo
+
+# ============================================
+# Logs
+# ============================================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+firebase-debug.log
+firestore-debug.log
+pubsub-debug.log
+functions-debug.log
+ui-debug.log
+
+# ============================================
+# IDE
+# ============================================
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+
+# ============================================
+# Archivos sensibles y de entorno
+# ============================================
+.env
+.env.local
+.env.*.local
+.firebaserc
+
+# ============================================
+# Sistema operativo
+# ============================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# ============================================
+# Testing
+# ============================================
+coverage/
+.nyc_output/
+
+# ============================================
+# Archivos de backup
+# ============================================
+*.bak
+*.backup
+*.orig

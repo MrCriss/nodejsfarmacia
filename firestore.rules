@@ -1,0 +1,110 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // REGLAS DE SEGURIDAD (RLS) - Row Level Security
+    // ============================================
+    
+    // Función helper para verificar autenticación
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función helper para verificar si es admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Función helper para verificar propietario
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // ============================================
+    // COLECCIÓN: users (Usuarios)
+    // ============================================
+    match /users/{userId} {
+      // Leer: Solo el usuario autenticado puede ver su propio perfil o admins
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Crear: Solo usuarios autenticados pueden crear su propio documento
+      allow create: if isOwner(userId) && 
+                      request.resource.data.keys().hasOnly(['email', 'displayName', 'role', 'createdAt']) &&
+                      request.resource.data.role in ['user', 'admin'] &&
+                      request.resource.data.role == 'user'; // Por defecto, solo 'user'
+      
+      // Actualizar: Solo el propietario puede actualizar su perfil
+      allow update: if isOwner(userId) &&
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'createdAt']);
+      
+      // Eliminar: Solo admins pueden eliminar usuarios
+      allow delete: if isAdmin();
+      
+      // Subcolección: orders (Pedidos)
+      match /orders/{orderId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) &&
+                        request.resource.data.keys().hasOnly(['productId', 'quantity', 'price', 'createdAt', 'status']) &&
+                        request.resource.data.quantity > 0 &&
+                        request.resource.data.status == 'pending';
+        allow update: if isOwner(userId) && resource.data.userId == userId;
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+    
+    // ============================================
+    // COLECCIÓN: products (Productos)
+    // ============================================
+    match /products/{productId} {
+      // Leer: Todos pueden ver productos
+      allow read: if true;
+      
+      // Crear: Solo admins
+      allow create: if isAdmin() &&
+                      request.resource.data.keys().hasOnly(['name', 'description', 'price', 'stock', 'category', 'createdAt']);
+      
+      // Actualizar: Solo admins
+      allow update: if isAdmin();
+      
+      // Eliminar: Solo admins
+      allow delete: if isAdmin();
+      
+      // Subcolección: reviews (Reseñas)
+      match /reviews/{reviewId} {
+        allow read: if true; // Todos pueden ver reseñas
+        allow create: if isAuthenticated() &&
+                        request.resource.data.keys().hasOnly(['userId', 'rating', 'comment', 'createdAt']) &&
+                        request.resource.data.rating >= 1 && 
+                        request.resource.data.rating <= 5;
+        allow update: if isOwner(request.resource.data.userId);
+        allow delete: if isOwner(request.resource.data.userId) || isAdmin();
+      }
+    }
+    
+    // ============================================
+    // COLECCIÓN: settings (Configuración)
+    // ============================================
+    match /settings/{document=**} {
+      // Solo admins pueden leer y escribir configuraciones
+      allow read, write: if isAdmin();
+    }
+    
+    // ============================================
+    // COLECCIÓN: logs (Auditoría)
+    // ============================================
+    match /logs/{logId} {
+      // Solo lectura para admins
+      allow read: if isAdmin();
+      // El servidor puede escribir logs (deshabilitado para clientes)
+      allow write: if false;
+    }
+    
+    // Denegar acceso por defecto
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
