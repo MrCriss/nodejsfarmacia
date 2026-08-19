@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getStorage, connectStorageEmulator } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 // ⚠️ IMPORTANTE: Reemplaza estas credenciales con las de tu proyecto Firebase
 // Las credenciales públicas de Firebase son seguras para apps cliente
@@ -21,18 +21,5 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-
-// Emulador para desarrollo (opcional)
-if (import.meta.env.MODE === 'development' && !auth.app._deleted) {
-  try {
-    // Descomentar solo si estás usando emuladores locales
-    // connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-    // connectFirestoreEmulator(db, 'localhost', 8080);
-    // connectStorageEmulator(storage, 'localhost', 9199);
-  } catch (error) {
-    // Emulator ya está conectado o no disponible
-    console.debug('Emulator info:', error.message);
-  }
-}
 
 export default app;

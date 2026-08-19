@@ -1,0 +1,6 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="400" fill="#e8f3f6"/>
+  <circle cx="200" cy="180" r="60" fill="#b8d4db"/>
+  <path d="M 200 260 Q 160 280 160 320 L 240 320 Q 240 280 200 260" fill="#b8d4db"/>
+  <text x="200" y="370" font-size="20" text-anchor="middle" fill="#666" font-family="Arial">Producto</text>
+</svg>

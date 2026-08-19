@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import emailjs from '@emailjs/browser';
 
 const pharmacyEmail = import.meta.env.VITE_CONTACT_EMAIL || 'contacto@farmaciabonita.cl';
+const emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
+const emailjsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
+const emailjsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
+
 const MAX_NAME_LENGTH = 60;
 const MAX_EMAIL_LENGTH = 100;
 const MAX_MESSAGE_LENGTH = 1000;
@@ -16,14 +21,23 @@ const ContactoPage = () => {
         message: ''
     });
     const [status, setStatus] = useState({ text: '', type: 'info' });
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (emailjsPublicKey) {
+            emailjs.init(emailjsPublicKey);
+        }
+    }, []);
 
     const handleChange = (event) => {
         const { name, value } = event.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
+        setIsLoading(true);
+        setStatus({ text: '', type: 'info' });
 
         const name = sanitizeValue(formData.name);
         const email = sanitizeValue(formData.email);
@@ -31,27 +45,32 @@ const ContactoPage = () => {
 
         if (!name || !email || !message) {
             setStatus({ text: 'Completa tu nombre, correo y mensaje para continuar.', type: 'error' });
+            setIsLoading(false);
             return;
         }
 
         if (name.length > MAX_NAME_LENGTH) {
             setStatus({ text: 'El nombre es demasiado largo.', type: 'error' });
+            setIsLoading(false);
             return;
         }
 
         if (email.length > MAX_EMAIL_LENGTH) {
             setStatus({ text: 'El correo es demasiado largo.', type: 'error' });
+            setIsLoading(false);
             return;
         }
 
         if (message.length > MAX_MESSAGE_LENGTH) {
             setStatus({ text: 'El mensaje es demasiado largo. Reduce el texto.', type: 'error' });
+            setIsLoading(false);
             return;
         }
 
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(email)) {
             setStatus({ text: 'Ingresa un correo electrónico válido.', type: 'error' });
+            setIsLoading(false);
             return;
         }
 
@@ -61,27 +80,45 @@ const ContactoPage = () => {
 
             if (now - lastSubmit < RATE_LIMIT_MS) {
                 setStatus({ text: 'Espera unos segundos antes de enviar otra consulta.', type: 'error' });
+                setIsLoading(false);
                 return;
             }
 
-            window.localStorage.setItem(STORAGE_KEY, String(now));
+            if (emailjsServiceId && emailjsTemplateId && emailjsPublicKey) {
+                await emailjs.send(emailjsServiceId, emailjsTemplateId, {
+                    to_email: pharmacyEmail,
+                    from_name: name,
+                    from_email: email,
+                    message: message,
+                    reply_to: email
+                });
+
+                window.localStorage.setItem(STORAGE_KEY, String(now));
+                setStatus({ text: '✓ Tu mensaje fue enviado exitosamente. Nos pondremos en contacto pronto.', type: 'success' });
+                setFormData({ name: '', email: '', message: '' });
+            } else {
+                setStatus({ text: '⚠️ Abriendo Gmail para enviar tu mensaje...', type: 'info' });
+                window.localStorage.setItem(STORAGE_KEY, String(now));
+
+                const subject = encodeURIComponent(`Consulta desde la web - ${name}`);
+                const body = encodeURIComponent(
+                    `Nombre: ${name}\nCorreo: ${email}\n\nMensaje:\n${message}`
+                );
+
+                window.open(
+                    `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(pharmacyEmail)}&su=${subject}&body=${body}`,
+                    '_blank',
+                    'noopener,noreferrer'
+                );
+
+                setFormData({ name: '', email: '', message: '' });
+            }
         } catch (error) {
-            console.warn('No se pudo guardar el límite de envío:', error);
+            console.error('Error al enviar formulario:', error);
+            setStatus({ text: `Error: ${error.message || 'No se pudo enviar el mensaje. Intenta de nuevo.'}`, type: 'error' });
+        } finally {
+            setIsLoading(false);
         }
-
-        const subject = encodeURIComponent(`Consulta desde la web - ${name}`);
-        const body = encodeURIComponent(
-            `Nombre: ${name}\nCorreo: ${email}\n\nMensaje:\n${message}`
-        );
-
-        window.open(
-            `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(pharmacyEmail)}&su=${subject}&body=${body}`,
-            '_blank',
-            'noopener,noreferrer'
-        );
-
-        setStatus({ text: 'Se abrió Gmail con tu mensaje preparado. Solo debes enviarlo desde allí.', type: 'success' });
-        setFormData({ name: '', email: '', message: '' });
     };
 
     return (
@@ -109,6 +146,7 @@ const ContactoPage = () => {
                                     placeholder="Ej: Juan Pérez"
                                     type="text"
                                     value={formData.name}
+                                    disabled={isLoading}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -122,6 +160,7 @@ const ContactoPage = () => {
                                     placeholder="juan@ejemplo.cl"
                                     type="email"
                                     value={formData.email}
+                                    disabled={isLoading}
                                 />
                             </div>
                         </div>
@@ -134,15 +173,20 @@ const ContactoPage = () => {
                                 onChange={handleChange}
                                 placeholder="Escribe tu consulta breve..."
                                 value={formData.message}
+                                disabled={isLoading}
                             />
                         </div>
                         {status.text ? (
-                            <p className={`text-sm font-medium ${status.type === 'error' ? 'text-red-600' : 'text-primary'}`}>
+                            <p className={`text-sm font-medium ${status.type === 'error' ? 'text-red-600' : status.type === 'success' ? 'text-green-600' : 'text-primary'}`}>
                                 {status.text}
                             </p>
                         ) : null}
-                        <button className="w-full md:w-auto bg-primary text-on-primary px-10 py-4 rounded-full font-headline-sm text-headline-sm hover:opacity-90 active:scale-95 transition-all shadow-md" type="submit">
-                            Enviar Consulta
+                        <button
+                            className="w-full md:w-auto bg-primary text-on-primary px-10 py-4 rounded-full font-headline-sm text-headline-sm hover:opacity-90 active:scale-95 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            type="submit"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? 'Enviando...' : 'Enviar Consulta'}
                         </button>
                     </form>
                 </section>
