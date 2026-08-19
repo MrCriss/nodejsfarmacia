@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import Nav from './components/Nav';
 import Footer from './components/Footer';
 import WhatsAppFloating from './components/WhatsAppFloating';
@@ -9,6 +11,8 @@ import ServiciosPage from './components/ServiciosPage';
 import SobreNosotrosPage from './components/SobreNosotrosPage';
 import ContactoPage from './components/ContactoPage';
 import InformacionPage from './components/InformacionPage';
+import LoginPage from './components/admin/LoginPage';
+import AdminDashboard from './components/admin/AdminDashboard';
 
 const terminosItems = [
   {
@@ -68,10 +72,31 @@ function App() {
   }, []);
 
   return (
+    <AuthProvider>
+      <AppContent showScrollTop={showScrollTop} />
+    </AuthProvider>
+  );
+}
+
+function AppContent({ showScrollTop }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-surface">
+        <div className="animate-spin">
+          <span className="material-symbols-outlined text-primary text-5xl">hourglass_empty</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
     <Router>
       <div className="bg-surface text-on-surface font-body-md overflow-x-hidden">
-        <Nav />
+        {!user && <Nav />}
         <Routes>
+          {/* Rutas públicas */}
           <Route path="/" element={<HomePage />} />
           <Route path="/productos" element={<ProductosPage />} />
           <Route path="/servicios" element={<ServiciosPage />} />
@@ -81,10 +106,19 @@ function App() {
           <Route path="/privacidad" element={<InformacionPage title="Política de Privacidad" description="Información sobre el tratamiento de tus datos y tus derechos como usuario." items={privacidadItems} />} />
           <Route path="/preguntas-frecuentes" element={<InformacionPage title="Preguntas Frecuentes" description="Respuestas rápidas a las dudas más comunes de nuestros usuarios." items={faqItems} />} />
           <Route path="/trabaja-con-nosotros" element={<InformacionPage title="Trabaja con Nosotros" description="Información para quienes desean formar parte de nuestro equipo." items={trabajoItems} />} />
+
+          {/* Rutas de autenticación */}
+          <Route path="/admin/login" element={user ? <Navigate to="/admin" /> : <LoginPage />} />
+
+          {/* Rutas protegidas de admin */}
+          <Route path="/admin/*" element={user ? <AdminDashboard /> : <Navigate to="/admin/login" />} />
+
+          {/* Ruta 404 */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
-        <Footer />
-        <WhatsAppFloating />
-        {showScrollTop ? (
+        {!user && <Footer />}
+        {!user && <WhatsAppFloating />}
+        {!user && showScrollTop ? (
           <button
             type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

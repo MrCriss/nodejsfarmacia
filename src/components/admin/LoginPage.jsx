@@ -1,0 +1,104 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+
+const LoginPage = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await login(email, password);
+      navigate('/admin');
+    } catch (err) {
+      if (err.code === 'auth/user-not-found') {
+        setError('Usuario no encontrado.');
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Contraseña incorrecta.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Correo electrónico inválido.');
+      } else {
+        setError(err.message || 'Error al iniciar sesión.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-primary mb-2">Admin Farmacia</h1>
+          <p className="text-on-surface-variant">Inicia sesión para acceder al panel de administración</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-on-surface mb-2">
+              Correo Electrónico
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-outline rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+              placeholder="admin@farmaciabonita.cl"
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-on-surface mb-2">
+              Contraseña
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-outline rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+              placeholder="••••••••"
+              disabled={loading}
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-primary text-on-primary py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          </button>
+        </form>
+
+        <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-xs text-blue-900 font-medium mb-2">📝 Para crear la primera cuenta admin:</p>
+          <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
+            <li>Ve a <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Firebase Console</a></li>
+            <li>Proyecto → Authentication → Habilita Email/Password</li>
+            <li>Crea un usuario admin directamente en Firebase</li>
+            <li>Luego, actualiza Firestore para dar rol "admin"</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;
