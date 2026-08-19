@@ -12,6 +12,7 @@ import SobreNosotrosPage from './components/SobreNosotrosPage';
 import ContactoPage from './components/ContactoPage';
 import InformacionPage from './components/InformacionPage';
 import LoginPage from './components/admin/LoginPage';
+import AdminSetup from './components/admin/AdminSetup';
 import AdminDashboard from './components/admin/AdminDashboard';
 
 const terminosItems = [
@@ -108,6 +109,7 @@ function AppContent({ showScrollTop }) {
           <Route path="/trabaja-con-nosotros" element={<InformacionPage title="Trabaja con Nosotros" description="Información para quienes desean formar parte de nuestro equipo." items={trabajoItems} />} />
 
           {/* Rutas de autenticación */}
+          <Route path="/admin/setup" element={<AdminSetup />} />
           <Route path="/admin/login" element={user ? <Navigate to="/admin" /> : <LoginPage />} />
 
           {/* Rutas protegidas de admin */}
