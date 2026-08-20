@@ -32,13 +32,13 @@ service cloud.firestore {
       
       // Crear: Solo usuarios autenticados pueden crear su propio documento
       allow create: if isOwner(userId) && 
-                      request.resource.data.keys().hasOnly(['email', 'displayName', 'role', 'createdAt']) &&
-                      request.resource.data.role in ['user', 'admin'] &&
-                      request.resource.data.role == 'user'; // Por defecto, solo 'user'
+                      request.resource.data.keys().hasOnly(['email', 'displayName', 'role', 'createdAt', 'photoURL']) &&
+                      request.resource.data.role == null;
       
-      // Actualizar: Solo el propietario puede actualizar su perfil
-      allow update: if isOwner(userId) &&
-                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'createdAt']);
+      // Actualizar: Solo admins pueden cambiar role, solo propietario puede cambiar otros campos
+      allow update: if isAdmin() ||
+                      (isOwner(userId) && 
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'createdAt', 'email']));
       
       // Eliminar: Solo admins pueden eliminar usuarios
       allow delete: if isAdmin();
