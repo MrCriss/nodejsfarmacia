@@ -7,14 +7,14 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, userRole } = useAuth();
+  const { login, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (userRole === 'admin') {
+    if (isAdmin()) {
       navigate('/admin');
     }
-  }, [userRole, navigate]);
+  }, [isAdmin, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +23,13 @@ const LoginPage = () => {
 
     try {
       await login(email, password);
-      // La navegación se maneja automáticamente cuando userRole sea 'admin'
+      // El useEffect arriba verificará isAdmin() y redirigirá si es necesario
+      // Si no es admin, mostraremos error abajo
+      setTimeout(() => {
+        if (!isAdmin()) {
+          setError('Error al iniciar sesión. Asegúrate de que tu rol es admin.');
+        }
+      }, 500);
     } catch (err) {
       if (err.code === 'auth/user-not-found') {
         setError('Usuario no encontrado.');
@@ -32,7 +38,7 @@ const LoginPage = () => {
       } else if (err.code === 'auth/invalid-email') {
         setError('Correo electrónico inválido.');
       } else {
-        setError(err.message || 'Error al iniciar sesión. Asegúrate de que tu rol es admin.');
+        setError(err.message || 'Error al iniciar sesión.');
       }
     } finally {
       setLoading(false);

@@ -80,7 +80,7 @@ function App() {
 }
 
 function AppContent({ showScrollTop }) {
-  const { user, loading } = useAuth();
+  const { user, userRole, loading, isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -95,7 +95,8 @@ function AppContent({ showScrollTop }) {
   return (
     <Router>
       <div className="bg-surface text-on-surface font-body-md overflow-x-hidden">
-        {!user && <Nav />}
+        {/* Mostrar Nav siempre, pero ocultar solo cuando estamos en rutas de admin autenticado */}
+        {!(user && isAdmin()) && <Nav />}
         <Routes>
           {/* Rutas públicas */}
           <Route path="/" element={<HomePage />} />
@@ -110,17 +111,17 @@ function AppContent({ showScrollTop }) {
 
           {/* Rutas de autenticación */}
           <Route path="/admin/setup" element={<AdminSetup />} />
-          <Route path="/admin/login" element={user ? <Navigate to="/admin" /> : <LoginPage />} />
+          <Route path="/admin/login" element={isAdmin() ? <Navigate to="/admin" /> : <LoginPage />} />
 
           {/* Rutas protegidas de admin */}
-          <Route path="/admin/*" element={user ? <AdminDashboard /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/*" element={isAdmin() ? <AdminDashboard /> : <Navigate to="/admin/login" />} />
 
           {/* Ruta 404 */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
-        {!user && <Footer />}
-        {!user && <WhatsAppFloating />}
-        {!user && showScrollTop ? (
+        {!(user && isAdmin()) && <Footer />}
+        {!(user && isAdmin()) && <WhatsAppFloating />}
+        {!(user && isAdmin()) && showScrollTop ? (
           <button
             type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
