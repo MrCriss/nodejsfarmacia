@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -7,8 +7,14 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, userRole } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (userRole === 'admin') {
+      navigate('/admin');
+    }
+  }, [userRole, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +23,7 @@ const LoginPage = () => {
 
     try {
       await login(email, password);
-      navigate('/admin');
+      // La navegación se maneja automáticamente cuando userRole sea 'admin'
     } catch (err) {
       if (err.code === 'auth/user-not-found') {
         setError('Usuario no encontrado.');
@@ -26,7 +32,7 @@ const LoginPage = () => {
       } else if (err.code === 'auth/invalid-email') {
         setError('Correo electrónico inválido.');
       } else {
-        setError(err.message || 'Error al iniciar sesión.');
+        setError(err.message || 'Error al iniciar sesión. Asegúrate de que tu rol es admin.');
       }
     } finally {
       setLoading(false);
@@ -87,13 +93,24 @@ const LoginPage = () => {
           </button>
         </form>
 
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-xs text-blue-900 font-medium mb-2">📝 Para crear la primera cuenta admin:</p>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-on-surface-variant mb-3">¿No tienes cuenta admin?</p>
+          <a
+            href="/admin/setup"
+            className="inline-block bg-secondary text-on-secondary px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition"
+          >
+            Crear Nueva Cuenta
+          </a>
+        </div>
+
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-xs text-blue-900 font-medium mb-2">📝 Flujo de autenticación:</p>
           <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
+            <li>Ve a <a href="/admin/setup" className="underline font-semibold">Crear Nueva Cuenta</a></li>
+            <li>Completa el formulario y crea el usuario</li>
             <li>Ve a <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Firebase Console</a></li>
-            <li>Proyecto → Authentication → Habilita Email/Password</li>
-            <li>Crea un usuario admin directamente en Firebase</li>
-            <li>Luego, actualiza Firestore para dar rol "admin"</li>
+            <li>Firestore Database → users → Edita el campo "role" a "admin"</li>
+            <li>Vuelve aquí e inicia sesión</li>
           </ol>
         </div>
       </div>

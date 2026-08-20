@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { auth, db } from '../../config/firebase';
 import { createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const AdminSetup = () => {
   const [email, setEmail] = useState('');
@@ -11,7 +11,7 @@ const AdminSetup = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const handleCreateAdmin = async (e) => {
+  const handleCreateUser = async (e) => {
     e.preventDefault();
     setError('');
     setMessage('');
@@ -25,24 +25,28 @@ const AdminSetup = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
-      // Crear documento en Firestore con el mismo UID
+      // Crear documento en Firestore automáticamente con role: null
       await setDoc(doc(db, 'users', uid), {
         email: email,
         displayName: displayName || email.split('@')[0],
-        role: 'admin',
-        createdAt: new Date(),
+        role: null,
+        createdAt: serverTimestamp(),
         photoURL: null
       });
 
-      setMessage(`✅ Usuario admin creado exitosamente!
+      setMessage(`✅ Usuario creado exitosamente!
       
 UID: ${uid}
 Email: ${email}
 Nombre: ${displayName || email.split('@')[0]}
+Rol: null (sin permisos)
 
-Ahora puedes ir a /admin/login e iniciar sesión con:
-- Email: ${email}
-- Contraseña: ${password}`);
+📝 Ahora debes:
+1. Ir a Firebase Console → Firestore Database
+2. Abrir la collection "users"
+3. Buscar el documento con ID: ${uid}
+4. Editar el campo "role" y cambiar de null a "admin"
+5. ¡Listo! El usuario podrá acceder al admin`);
 
       // Limpiar formulario
       setEmail('');
@@ -51,7 +55,7 @@ Ahora puedes ir a /admin/login e iniciar sesión con:
     } catch (err) {
       console.error('Error:', err);
       if (err.code === 'auth/email-already-in-use') {
-        setError('Este email ya está registrado. Usa otro email o inicia sesión si ya es admin.');
+        setError('Este email ya está registrado. Usa otro email.');
       } else if (err.code === 'auth/weak-password') {
         setError('La contraseña debe tener al menos 6 caracteres.');
       } else {
@@ -66,11 +70,11 @@ Ahora puedes ir a /admin/login e iniciar sesión con:
     <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary mb-2">Crear Admin</h1>
-          <p className="text-on-surface-variant">Configura la primera cuenta de administrador</p>
+          <h1 className="text-3xl font-bold text-primary mb-2">Crear Nuevo Usuario</h1>
+          <p className="text-on-surface-variant">Registra un nuevo usuario (rol por defecto: ninguno)</p>
         </div>
 
-        <form onSubmit={handleCreateAdmin} className="space-y-6">
+        <form onSubmit={handleCreateUser} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-on-surface mb-2">
               Nombre (Opcional)
@@ -132,18 +136,19 @@ Ahora puedes ir a /admin/login e iniciar sesión con:
             disabled={loading}
             className="w-full bg-primary text-on-primary py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
-            {loading ? 'Creando admin...' : 'Crear Admin'}
+            {loading ? 'Creando usuario...' : 'Crear Usuario'}
           </button>
         </form>
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200 text-xs text-blue-800">
-          <p className="font-medium mb-2">⚠️ Importante:</p>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Este formulario crea un usuario nuevo en Firebase</li>
-            <li>Se crea automáticamente en Firestore con rol "admin"</li>
-            <li>Guarda el email y contraseña en un lugar seguro</li>
-            <li>Después ve a /admin/login para iniciar sesión</li>
-          </ul>
+          <p className="font-medium mb-2">📋 Flujo de creación:</p>
+          <ol className="list-decimal list-inside space-y-1">
+            <li>Completa el formulario y da clic en "Crear Usuario"</li>
+            <li>El usuario se crea en Firebase Authentication</li>
+            <li>Se crea automáticamente en Firestore (users) con role: null</li>
+            <li>Ve a Firebase Console → Firestore y edita el campo "role" a "admin"</li>
+            <li>¡Listo! Ahora puede iniciar sesión en /admin/login</li>
+          </ol>
         </div>
       </div>
     </div>
